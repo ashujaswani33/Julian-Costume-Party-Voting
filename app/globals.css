@@ -569,3 +569,41 @@ tr:last-child td { border-bottom: 0; }
   .lightbox-nav.left { left: 6px; }
   .lightbox-nav.right { right: 6px; }
 }
+
+
+/* Voting interaction fix: photo/card selects; gallery is separate */
+.vote-select-area {
+  position: relative;
+  width: 100%;
+  display: block;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  text-align: left;
+}
+.vote-select-area .meta {
+  display: grid;
+  gap: 3px;
+}
+.view-photo-btn {
+  margin: 0 8px 8px;
+  min-height: 38px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: rgba(255,255,255,.035);
+  color: var(--muted);
+  font-size: .78rem;
+  font-weight: 750;
+}
+.view-photo-btn:hover,
+.view-photo-btn:focus-visible {
+  color: var(--text);
+  border-color: rgba(255,138,61,.55);
+}
+.vote-card.selected .view-photo-btn {
+  border-color: rgba(255,138,61,.32);
+}
+@media (max-width: 760px) {
+  .view-photo-btn { min-height: 36px; font-size: .74rem; }
+}

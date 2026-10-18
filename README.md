@@ -1,11 +1,12 @@
-PICTURE GALLERY + UNIFORM THUMBNAILS UPDATE
+VOTING CLICK FIX
 
-Replace these files in your GitHub repo under the app folder:
+Replace these two files in your GitHub repo:
 - app/page.js
 - app/globals.css
 
-What this update adds:
-- uniform photo thumbnails with the same frame size
-- background/padding so different image aspect ratios still look neat
-- tap any costume photo to open it inside the page in a smooth gallery viewer
-- improved voting cards with a separate Select button and enlarged-photo viewing
+New behavior during voting:
+- Tap costume/photo = select that contestant
+- View full photo = opens gallery/lightbox
+- Submit Vote button = confirms vote
+
+Outside voting, tapping photos still opens the gallery.

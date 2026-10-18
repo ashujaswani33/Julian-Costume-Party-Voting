@@ -445,7 +445,7 @@ export default function HomePage() {
               <div className="voting-heading">
                 <div className="eyebrow">Voting is open</div>
                 <h2>🏆 Pick the best costume</h2>
-                <p className="muted">Tap a photo to enlarge it, or tap Select to choose your favorite costume. You can&apos;t vote for yourself.</p>
+                <p className="muted">Tap a costume to select it. Use “View full photo” if you want a closer look before voting. You can&apos;t vote for yourself.</p>
               </div>
 
               {eligibleContestants.length === 0 ? (
@@ -458,28 +458,28 @@ export default function HomePage() {
                       <article className={`costume vote-card ${selected ? 'selected' : ''}`} key={candidate.id}>
                         <button
                           type="button"
-                          className="image-open"
-                          onClick={() => openLightbox(votingLightboxItems, candidate.id)}
-                          aria-label={`Open ${candidate.name}'s costume photo`}
+                          className="vote-select-area"
+                          onClick={() => setSelectedCandidateId(candidate.id)}
+                          disabled={voting}
+                          aria-pressed={selected}
+                          aria-label={`Select ${candidate.name}'s costume for voting`}
                         >
                           <div className="thumb-frame">
                             <img src={candidate.photoUrl} alt={`${candidate.name}'s costume`} />
                           </div>
-                          <span className="zoom-badge" aria-hidden="true">⤢</span>
                           {selected ? <span className="selected-mark" aria-hidden="true">✓</span> : null}
+                          <div className="meta">
+                            <strong>{candidate.name}</strong>
+                            <span>{selected ? 'Selected ✓' : 'Tap to select'}</span>
+                          </div>
                         </button>
-                        <div className="meta">
-                          <strong>{candidate.name}</strong>
-                          <span>{selected ? 'Selected ✓' : 'Tap Select below'}</span>
-                        </div>
                         <button
                           type="button"
-                          className={`select-vote-btn ${selected ? 'selected' : ''}`}
-                          onClick={() => setSelectedCandidateId(candidate.id)}
-                          disabled={voting}
-                          aria-pressed={selected}
+                          className="view-photo-btn"
+                          onClick={() => openLightbox(votingLightboxItems, candidate.id)}
+                          aria-label={`View ${candidate.name}'s full costume photo`}
                         >
-                          {selected ? 'Selected ✓' : 'Select this costume'}
+                          ⤢ View full photo
                         </button>
                       </article>
                     );
