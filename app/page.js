@@ -219,9 +219,11 @@ export default function HomePage() {
   return (
     <main className="shell">
       <section className="hero">
-        <div className="eyebrow">Scan • Register • Vote</div>
-        <h1>{settings.party_name}</h1>
-        <p className="muted">Upload your costume photo, then come back on the same phone when voting opens.</p>
+        <div className="eyebrow">🎃 Julian's Halloween Party • Costume Competition</div>
+        <h1>Julian Halloween Party Costume Competition</h1>
+        <p className="spooky-challenge">Only the scared ones won’t register. 👻</p>
+        <p className="muted hero-copy">Show us what you’ve got. Register your costume now for a chance to claim a <strong>HEFTY reward</strong> at the end of the party.</p>
+        <div className="prize-banner" role="note">🏆 Dress to impress. Bragging rights are temporary. The reward is real.</div>
         <div className="row">
           <span className={`badge ${settings.registration_open ? 'open' : ''}`}>Registration {settings.registration_open ? 'open' : 'closed'}</span>
           <span className={`badge ${settings.voting_open ? 'open' : ''}`}>Voting {settings.voting_open ? 'open' : 'closed'}</span>
@@ -236,8 +238,8 @@ export default function HomePage() {
         <section className="grid two" style={{ marginTop: 16 }}>
           <form className="card stack" onSubmit={handleRegister}>
             <div>
-              <h2>Register your costume</h2>
-              <p className="muted">Use the same phone later for voting.</p>
+              <h2>🎭 Dare to enter?</h2>
+              <p className="muted">Add your name and costume photo. Use the same phone later when the showdown moves to voting.</p>
             </div>
 
             {!settings.registration_open ? (
@@ -278,7 +280,7 @@ export default function HomePage() {
                 {preview ? <img className="preview" src={preview} alt="Your costume preview" /> : null}
 
                 <button className="btn" type="submit" disabled={registering}>
-                  {registering ? 'Registering…' : 'Register for the party'}
+                  {registering ? 'Entering the competition…' : '🎃 Enter the Costume Competition'}
                 </button>
                 <div className="muted" style={{ fontSize: '.82rem' }}>
                   By registering, you agree that your name and costume photo can be shown to people using this party page.
@@ -289,10 +291,10 @@ export default function HomePage() {
 
           <section className="card stack">
             <div>
-              <h2>How it works</h2>
-              <p className="muted">1. Register once. 2. Keep this page on the same phone. 3. When the host opens voting, choose your favorite costume.</p>
+              <h2>How the fright night works</h2>
+              <p className="muted"><strong>1.</strong> Register your costume. <strong>2.</strong> Keep this page on the same phone. <strong>3.</strong> When voting opens, pick the costume that deserves the crown.</p>
             </div>
-            <div className="notice">Guests never see vote totals or the current leader.</div>
+            <div className="notice">🕸️ The leaderboard stays secret. Only the host can see the votes before the winner is revealed.</div>
           </section>
         </section>
       )}
@@ -301,14 +303,14 @@ export default function HomePage() {
         <section className="card stack" style={{ marginTop: 16 }}>
           <div className="row space-between">
             <div>
-              <div className="eyebrow">Registered</div>
+              <div className="eyebrow">You survived registration 👻</div>
               <h2>{me.name}</h2>
             </div>
-            <span className="badge open">Ready to vote</span>
+            <span className="badge open">Costume entered ✓</span>
           </div>
 
           {!settings.voting_open && !hasVoted ? (
-            <div className="notice">Voting is not open yet. Keep this page bookmarked or scan the same QR code again later on this phone.</div>
+            <div className="notice">🦇 Your costume is in. Voting is not open yet—come back on this same phone when the host starts the showdown.</div>
           ) : null}
 
           {hasVoted ? (
@@ -317,7 +319,7 @@ export default function HomePage() {
 
           {settings.voting_open && !hasVoted ? (
             <div>
-              <h2 style={{ marginBottom: 6 }}>Choose the best costume</h2>
+              <h2 style={{ marginBottom: 6 }}>🏆 Crown the best costume</h2>
               <p className="muted">Tap one photo. You cannot vote for yourself, and your vote cannot be changed.</p>
               {eligibleContestants.length === 0 ? (
                 <div className="notice">No other costumes are available yet.</div>
@@ -340,7 +342,7 @@ export default function HomePage() {
 
       <section style={{ marginTop: 24 }}>
         <div className="row space-between">
-          <h2>Costumes</h2>
+          <h2>🎃 The Costume Lineup</h2>
           <span className="muted">{contestants.length} registered</span>
         </div>
         <div className="costume-grid" style={{ marginTop: 12 }}>

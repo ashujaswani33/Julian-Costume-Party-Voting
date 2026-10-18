@@ -179,3 +179,7 @@ The admin results page now includes a private **Who voted for whom** table. This
 ## Android camera update
 
 The guest registration screen now has separate **Take Photo** and **Choose From Gallery** buttons. The camera button uses the device camera directly (rear-facing camera when supported), while the gallery button opens existing photos. This is more reliable across Android and iPhone than relying on one file picker.
+
+## Halloween interface update
+The guest-facing page is branded as **Julian Halloween Party Costume Competition** and includes the playful registration challenge and hefty-reward message requested by the host.
+
