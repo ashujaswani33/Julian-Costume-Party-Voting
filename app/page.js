@@ -62,6 +62,17 @@ async function compressCostumePhoto(file) {
   }
 }
 
+function buildLightboxItems(items, metaBuilder) {
+  return items
+    .filter((item) => item?.photoUrl)
+    .map((item, index) => ({
+      id: item.id,
+      src: item.photoUrl,
+      title: item.name,
+      subtitle: metaBuilder ? metaBuilder(item, index) : ''
+    }));
+}
+
 export default function HomePage() {
   const [settings, setSettings] = useState({ party_name: 'Costume Party', registration_open: true, voting_open: false, results_visible: false });
   const [contestants, setContestants] = useState([]);
@@ -77,20 +88,29 @@ export default function HomePage() {
   const [preview, setPreview] = useState('');
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
+  const [lightbox, setLightbox] = useState({ items: [], index: 0, open: false });
 
   async function loadPublic() {
     try {
+      const cacheBust = Date.now();
       const [settingsRes, contestantsRes, resultsRes] = await Promise.all([
-        fetch('/api/settings', { cache: 'no-store' }),
-        fetch('/api/contestants', { cache: 'no-store' }),
-        fetch('/api/results', { cache: 'no-store' })
+        fetch(`/api/settings?_=${cacheBust}`, { cache: 'no-store' }),
+        fetch(`/api/contestants?_=${cacheBust}`, { cache: 'no-store' }),
+        fetch(`/api/results?_=${cacheBust}`, { cache: 'no-store' })
       ]);
       const settingsData = await readApiResponse(settingsRes);
       const contestantsData = await readApiResponse(contestantsRes);
       const resultsData = await readApiResponse(resultsRes);
       if (settingsRes.ok) setSettings(settingsData);
       if (contestantsRes.ok) setContestants(contestantsData.contestants || []);
-      if (resultsRes.ok) setPublicResults(resultsData);
+      if (resultsRes.ok) {
+        setPublicResults(resultsData);
+        if (typeof resultsData.resultsVisible === 'boolean') {
+          setSettings((current) => ({ ...current, results_visible: resultsData.resultsVisible }));
+        } else if (resultsData.visible === true) {
+          setSettings((current) => ({ ...current, results_visible: true }));
+        }
+      }
     } catch {
       setError('Could not load the party right now. Please refresh.');
     }
@@ -119,8 +139,20 @@ export default function HomePage() {
 
   useEffect(() => {
     Promise.all([loadPublic(), loadMe()]).finally(() => setLoading(false));
-    const timer = window.setInterval(loadPublic, 15000);
-    return () => window.clearInterval(timer);
+
+    const timer = window.setInterval(loadPublic, 8000);
+    const refreshNow = () => loadPublic();
+    const refreshWhenVisible = () => {
+      if (document.visibilityState === 'visible') loadPublic();
+    };
+    window.addEventListener('focus', refreshNow);
+    document.addEventListener('visibilitychange', refreshWhenVisible);
+
+    return () => {
+      window.clearInterval(timer);
+      window.removeEventListener('focus', refreshNow);
+      document.removeEventListener('visibilitychange', refreshWhenVisible);
+    };
   }, []);
 
   useEffect(() => {
@@ -132,6 +164,33 @@ export default function HomePage() {
     setPreview(url);
     return () => URL.revokeObjectURL(url);
   }, [photo]);
+
+  useEffect(() => {
+    if (!lightbox.open) return;
+
+    const onKeyDown = (event) => {
+      if (event.key === 'Escape') {
+        setLightbox((current) => ({ ...current, open: false }));
+      } else if (event.key === 'ArrowRight') {
+        setLightbox((current) => ({
+          ...current,
+          index: current.items.length ? (current.index + 1) % current.items.length : 0
+        }));
+      } else if (event.key === 'ArrowLeft') {
+        setLightbox((current) => ({
+          ...current,
+          index: current.items.length ? (current.index - 1 + current.items.length) % current.items.length : 0
+        }));
+      }
+    };
+
+    window.addEventListener('keydown', onKeyDown);
+    document.body.style.overflow = 'hidden';
+    return () => {
+      window.removeEventListener('keydown', onKeyDown);
+      document.body.style.overflow = '';
+    };
+  }, [lightbox.open]);
 
   const eligibleContestants = useMemo(
     () => contestants.filter((contestant) => contestant.id !== me?.id),
@@ -154,6 +213,37 @@ export default function HomePage() {
     });
   }, [contestants, publicResults]);
 
+  const lineupLightboxItems = useMemo(
+    () => buildLightboxItems(contestants, () => 'Registered costume entry'),
+    [contestants]
+  );
+
+  const votingLightboxItems = useMemo(
+    () => buildLightboxItems(eligibleContestants, () => 'Voting contestant'),
+    [eligibleContestants]
+  );
+
+  const resultsLightboxItems = useMemo(
+    () => buildLightboxItems(publicRanking, (row) => `Rank #${row.rank} • ${row.votes} vote${row.votes === 1 ? '' : 's'}`),
+    [publicRanking]
+  );
+
+  function openLightbox(items, selectedId) {
+    if (!items?.length) return;
+    const startIndex = Math.max(0, items.findIndex((item) => item.id === selectedId));
+    setLightbox({ items, index: startIndex >= 0 ? startIndex : 0, open: true });
+  }
+
+  function closeLightbox() {
+    setLightbox((current) => ({ ...current, open: false }));
+  }
+
+  function moveLightbox(step) {
+    setLightbox((current) => ({
+      ...current,
+      index: current.items.length ? (current.index + step + current.items.length) % current.items.length : 0
+    }));
+  }
 
   async function handlePhotoSelection(event) {
     const selected = event.target.files?.[0] || null;
@@ -237,6 +327,7 @@ export default function HomePage() {
   }
 
   const showLineup = !publicResults?.visible && !(me && settings.voting_open);
+  const activeLightboxItem = lightbox.items[lightbox.index];
 
   return (
     <main className="shell">
@@ -307,7 +398,9 @@ export default function HomePage() {
 
                 {preview ? (
                   <div className="preview-row">
-                    <img className="preview preview-small" src={preview} alt="Your costume preview" />
+                    <div className="thumb-frame preview-frame">
+                      <img className="preview preview-small" src={preview} alt="Your costume preview" />
+                    </div>
                     <div><strong>Photo ready ✓</strong><div className="muted">Looking scary enough.</div></div>
                   </div>
                 ) : null}
@@ -352,7 +445,7 @@ export default function HomePage() {
               <div className="voting-heading">
                 <div className="eyebrow">Voting is open</div>
                 <h2>🏆 Pick the best costume</h2>
-                <p className="muted">Tap one costume to select it, then submit your vote below. You can&apos;t vote for yourself.</p>
+                <p className="muted">Tap a photo to enlarge it, or tap Select to choose your favorite costume. You can&apos;t vote for yourself.</p>
               </div>
 
               {eligibleContestants.length === 0 ? (
@@ -365,19 +458,28 @@ export default function HomePage() {
                       <article className={`costume vote-card ${selected ? 'selected' : ''}`} key={candidate.id}>
                         <button
                           type="button"
+                          className="image-open"
+                          onClick={() => openLightbox(votingLightboxItems, candidate.id)}
+                          aria-label={`Open ${candidate.name}'s costume photo`}
+                        >
+                          <div className="thumb-frame">
+                            <img src={candidate.photoUrl} alt={`${candidate.name}'s costume`} />
+                          </div>
+                          <span className="zoom-badge" aria-hidden="true">⤢</span>
+                          {selected ? <span className="selected-mark" aria-hidden="true">✓</span> : null}
+                        </button>
+                        <div className="meta">
+                          <strong>{candidate.name}</strong>
+                          <span>{selected ? 'Selected ✓' : 'Tap Select below'}</span>
+                        </div>
+                        <button
+                          type="button"
+                          className={`select-vote-btn ${selected ? 'selected' : ''}`}
                           onClick={() => setSelectedCandidateId(candidate.id)}
                           disabled={voting}
                           aria-pressed={selected}
-                          aria-label={`Select ${candidate.name}'s costume`}
                         >
-                          <div className="vote-photo-wrap">
-                            <img src={candidate.photoUrl} alt={`${candidate.name}'s costume`} />
-                            {selected ? <span className="selected-mark" aria-hidden="true">✓</span> : null}
-                          </div>
-                          <div className="meta">
-                            <strong>{candidate.name}</strong>
-                            <span>{selected ? 'Selected ✓' : 'Tap to choose'}</span>
-                          </div>
+                          {selected ? 'Selected ✓' : 'Select this costume'}
                         </button>
                       </article>
                     );
@@ -423,7 +525,18 @@ export default function HomePage() {
               {publicRanking.map((row) => (
                 <article className={`ranking-row ${row.rank === 1 ? 'winner' : ''}`} key={row.id}>
                   <div className="rank-number">{row.rank === 1 ? '🏆' : `#${row.rank}`}</div>
-                  {row.photoUrl ? <img src={row.photoUrl} alt={`${row.name}'s costume`} /> : null}
+                  {row.photoUrl ? (
+                    <button
+                      type="button"
+                      className="ranking-photo-btn"
+                      onClick={() => openLightbox(resultsLightboxItems, row.id)}
+                      aria-label={`Open ${row.name}'s costume photo`}
+                    >
+                      <div className="thumb-frame ranking-thumb-frame">
+                        <img src={row.photoUrl} alt={`${row.name}'s costume`} />
+                      </div>
+                    </button>
+                  ) : null}
                   <div className="ranking-name"><strong>{row.name}</strong><span>{row.votes} vote{row.votes === 1 ? '' : 's'}</span></div>
                 </article>
               ))}
@@ -440,8 +553,18 @@ export default function HomePage() {
           </div>
           <div className="costume-grid lineup-grid" style={{ marginTop: 10 }}>
             {contestants.map((contestant) => (
-              <article className="costume" key={contestant.id}>
-                <img src={contestant.photoUrl} alt={`${contestant.name}'s costume`} />
+              <article className="costume lineup-card" key={contestant.id}>
+                <button
+                  type="button"
+                  className="image-open"
+                  onClick={() => openLightbox(lineupLightboxItems, contestant.id)}
+                  aria-label={`Open ${contestant.name}'s costume photo`}
+                >
+                  <div className="thumb-frame">
+                    <img src={contestant.photoUrl} alt={`${contestant.name}'s costume`} />
+                  </div>
+                  <span className="zoom-badge" aria-hidden="true">⤢</span>
+                </button>
                 <div className="meta">{contestant.name}</div>
               </article>
             ))}
@@ -451,6 +574,29 @@ export default function HomePage() {
       ) : null}
 
       <a className="admin-link" href="/admin">Party host / admin</a>
+
+      {lightbox.open && activeLightboxItem ? (
+        <div className="lightbox-backdrop" role="dialog" aria-modal="true" aria-label="Costume photo viewer" onClick={closeLightbox}>
+          <div className="lightbox-shell" onClick={(event) => event.stopPropagation()}>
+            <button type="button" className="lightbox-close" onClick={closeLightbox} aria-label="Close photo viewer">✕</button>
+            {lightbox.items.length > 1 ? (
+              <button type="button" className="lightbox-nav left" onClick={() => moveLightbox(-1)} aria-label="Previous photo">‹</button>
+            ) : null}
+            <div className="lightbox-stage">
+              <div className="lightbox-image-wrap">
+                <img src={activeLightboxItem.src} alt={activeLightboxItem.title} className="lightbox-image" />
+              </div>
+              <div className="lightbox-caption">
+                <strong>{activeLightboxItem.title}</strong>
+                {activeLightboxItem.subtitle ? <span>{activeLightboxItem.subtitle}</span> : null}
+              </div>
+            </div>
+            {lightbox.items.length > 1 ? (
+              <button type="button" className="lightbox-nav right" onClick={() => moveLightbox(1)} aria-label="Next photo">›</button>
+            ) : null}
+          </div>
+        </div>
+      ) : null}
     </main>
   );
 }
