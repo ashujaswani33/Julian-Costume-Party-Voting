@@ -1,12 +1,10 @@
-VOTING CLICK FIX
+VOTING HARD FIX
 
-Replace these two files in your GitHub repo:
-- app/page.js
-- app/globals.css
+Replace only this file in GitHub:
+app/page.js
 
-New behavior during voting:
-- Tap costume/photo = select that contestant
-- View full photo = opens gallery/lightbox
-- Submit Vote button = confirms vote
-
-Outside voting, tapping photos still opens the gallery.
+Important behavior after this update:
+- While voting is OPEN: tapping anywhere on a costume card/photo SELECTS that contestant. Gallery viewing is disabled during voting.
+- Before voting / lineup: tapping a photo opens the gallery.
+- Final results: tapping a photo opens the gallery.
+- After selecting a contestant, use the large Submit Vote button to cast the vote.

@@ -218,11 +218,6 @@ export default function HomePage() {
     [contestants]
   );
 
-  const votingLightboxItems = useMemo(
-    () => buildLightboxItems(eligibleContestants, () => 'Voting contestant'),
-    [eligibleContestants]
-  );
-
   const resultsLightboxItems = useMemo(
     () => buildLightboxItems(publicRanking, (row) => `Rank #${row.rank} • ${row.votes} vote${row.votes === 1 ? '' : 's'}`),
     [publicRanking]
@@ -472,14 +467,6 @@ export default function HomePage() {
                             <strong>{candidate.name}</strong>
                             <span>{selected ? 'Selected ✓' : 'Tap to select'}</span>
                           </div>
-                        </button>
-                        <button
-                          type="button"
-                          className="view-photo-btn"
-                          onClick={() => openLightbox(votingLightboxItems, candidate.id)}
-                          aria-label={`View ${candidate.name}'s full costume photo`}
-                        >
-                          ⤢ View full photo
                         </button>
                       </article>
                     );
