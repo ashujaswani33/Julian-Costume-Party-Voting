@@ -218,6 +218,11 @@ export default function HomePage() {
     [contestants]
   );
 
+  const votingLightboxItems = useMemo(
+    () => buildLightboxItems(eligibleContestants, () => 'Voting contestant'),
+    [eligibleContestants]
+  );
+
   const resultsLightboxItems = useMemo(
     () => buildLightboxItems(publicRanking, (row) => `Rank #${row.rank} • ${row.votes} vote${row.votes === 1 ? '' : 's'}`),
     [publicRanking]
@@ -440,53 +445,70 @@ export default function HomePage() {
               <div className="voting-heading">
                 <div className="eyebrow">Voting is open</div>
                 <h2>🏆 Pick the best costume</h2>
-                <p className="muted">Tap a costume to select it. Use “View full photo” if you want a closer look before voting. You can&apos;t vote for yourself.</p>
+                <p className="muted">Tap the orange VOTE button under the costume you choose, then confirm. You can&apos;t vote for yourself.</p>
               </div>
 
               {eligibleContestants.length === 0 ? (
                 <div className="notice">No other costumes are available yet.</div>
               ) : (
-                <div className="costume-grid voting-grid">
-                  {eligibleContestants.map((candidate) => {
-                    const selected = selectedCandidateId === candidate.id;
-                    return (
-                      <article className={`costume vote-card ${selected ? 'selected' : ''}`} key={candidate.id}>
-                        <button
-                          type="button"
-                          className="vote-select-area"
-                          onClick={() => setSelectedCandidateId(candidate.id)}
-                          disabled={voting}
-                          aria-pressed={selected}
-                          aria-label={`Select ${candidate.name}'s costume for voting`}
-                        >
-                          <div className="thumb-frame">
-                            <img src={candidate.photoUrl} alt={`${candidate.name}'s costume`} />
+                <>
+                  <div className="vote-version-note">Voting screen ready • tap the orange VOTE button</div>
+                  <div className="costume-grid voting-grid">
+                    {eligibleContestants.map((candidate) => {
+                      const selected = selectedCandidateId === candidate.id;
+                      return (
+                        <article className={`costume vote-card ${selected ? 'selected' : ''}`} key={candidate.id}>
+                          <div className="vote-photo-static" aria-hidden="true">
+                            <div className="thumb-frame">
+                              <img src={candidate.photoUrl} alt="" />
+                            </div>
                           </div>
-                          {selected ? <span className="selected-mark" aria-hidden="true">✓</span> : null}
                           <div className="meta">
                             <strong>{candidate.name}</strong>
-                            <span>{selected ? 'Selected ✓' : 'Tap to select'}</span>
+                            <span>{selected ? 'Ready to confirm ✓' : 'Choose this costume'}</span>
                           </div>
-                        </button>
-                      </article>
-                    );
-                  })}
-                </div>
+                          <button
+                            type="button"
+                            className={`vote-person-btn ${selected ? 'selected' : ''}`}
+                            onClick={() => setSelectedCandidateId(candidate.id)}
+                            disabled={voting}
+                            aria-pressed={selected}
+                          >
+                            {selected ? `✓ ${candidate.name} selected` : `VOTE FOR ${candidate.name}`}
+                          </button>
+                        </article>
+                      );
+                    })}
+                  </div>
+                </>
               )}
 
               {eligibleContestants.length > 0 ? (
                 <div className={`vote-action ${selectedCandidate ? 'ready' : ''}`}>
-                  <div className="vote-choice">
-                    {selectedCandidate ? <>Your pick: <strong>{selectedCandidate.name}</strong></> : 'Choose one costume above'}
-                  </div>
-                  <button
-                    className="btn vote-submit"
-                    type="button"
-                    onClick={() => selectedCandidate && handleVote(selectedCandidate)}
-                    disabled={!selectedCandidate || voting}
-                  >
-                    {voting ? 'Submitting vote…' : selectedCandidate ? `Submit Vote for ${selectedCandidate.name}` : 'Select a costume first'}
-                  </button>
+                  {selectedCandidate ? (
+                    <>
+                      <div className="vote-confirm-title">Confirm your vote</div>
+                      <div className="vote-choice">You are voting for <strong>{selectedCandidate.name}</strong></div>
+                      <button
+                        className="btn vote-submit"
+                        type="button"
+                        onClick={() => handleVote(selectedCandidate)}
+                        disabled={voting}
+                      >
+                        {voting ? 'Submitting vote…' : `CONFIRM VOTE FOR ${selectedCandidate.name}`}
+                      </button>
+                      <button
+                        className="vote-cancel-btn"
+                        type="button"
+                        onClick={() => setSelectedCandidateId('')}
+                        disabled={voting}
+                      >
+                        Choose someone else
+                      </button>
+                    </>
+                  ) : (
+                    <div className="vote-choice"><strong>Tap an orange VOTE button above.</strong></div>
+                  )}
                   <div className="vote-final-note">One vote only • cannot be changed</div>
                 </div>
               ) : null}

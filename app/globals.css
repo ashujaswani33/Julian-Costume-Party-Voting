@@ -570,40 +570,48 @@ tr:last-child td { border-bottom: 0; }
   .lightbox-nav.right { right: 6px; }
 }
 
-
-/* Voting interaction fix: photo/card selects; gallery is separate */
-.vote-select-area {
-  position: relative;
-  width: 100%;
-  display: block;
-  padding: 0;
-  border: 0;
-  background: transparent;
-  color: inherit;
-  text-align: left;
-}
-.vote-select-area .meta {
-  display: grid;
-  gap: 3px;
-}
-.view-photo-btn {
-  margin: 0 8px 8px;
-  min-height: 38px;
+/* Direct voting controls: photo is display-only during voting */
+.vote-version-note {
+  padding: 8px 10px;
   border-radius: 10px;
+  background: rgba(255,138,61,.10);
+  border: 1px solid rgba(255,138,61,.28);
+  color: #ffd9bf;
+  text-align: center;
+  font-size: .82rem;
+  font-weight: 800;
+}
+.vote-photo-static { pointer-events: none; }
+.vote-person-btn {
+  width: calc(100% - 16px);
+  margin: 0 8px 8px;
+  min-height: 46px;
+  padding: 9px 8px;
+  border: 0;
+  border-radius: 12px;
+  background: var(--accent);
+  color: #1d120a;
+  font-weight: 950;
+  font-size: .82rem;
+  line-height: 1.15;
+}
+.vote-person-btn.selected {
+  background: var(--success);
+  color: #062513;
+}
+.vote-confirm-title {
+  text-align: center;
+  font-weight: 900;
+  font-size: 1rem;
+}
+.vote-cancel-btn {
+  min-height: 40px;
   border: 1px solid var(--border);
-  background: rgba(255,255,255,.035);
+  border-radius: 11px;
+  background: transparent;
   color: var(--muted);
-  font-size: .78rem;
   font-weight: 750;
 }
-.view-photo-btn:hover,
-.view-photo-btn:focus-visible {
-  color: var(--text);
-  border-color: rgba(255,138,61,.55);
-}
-.vote-card.selected .view-photo-btn {
-  border-color: rgba(255,138,61,.32);
-}
 @media (max-width: 760px) {
-  .view-photo-btn { min-height: 36px; font-size: .74rem; }
+  .vote-person-btn { min-height: 48px; font-size: .78rem; }
 }

@@ -1,10 +1,12 @@
-VOTING HARD FIX
+DIRECT VOTING FIX
 
-Replace only this file in GitHub:
-app/page.js
+Replace BOTH files in GitHub:
+- app/page.js
+- app/globals.css
 
-Important behavior after this update:
-- While voting is OPEN: tapping anywhere on a costume card/photo SELECTS that contestant. Gallery viewing is disabled during voting.
-- Before voting / lineup: tapping a photo opens the gallery.
-- Final results: tapping a photo opens the gallery.
-- After selecting a contestant, use the large Submit Vote button to cast the vote.
+When the new version is live, the voting screen will visibly say:
+"Voting screen ready • tap the orange VOTE button"
+
+Each contestant has a large orange "VOTE FOR [NAME]" button.
+Photos are NOT clickable while voting is open.
+A second Confirm Vote step records the vote.
