@@ -615,3 +615,92 @@ tr:last-child td { border-bottom: 0; }
 @media (max-width: 760px) {
   .vote-person-btn { min-height: 48px; font-size: .78rem; }
 }
+
+/* Clean voting UI: tap photo to select, arrow to enlarge */
+.vote-version-note,
+.vote-person-btn,
+.vote-photo-static {
+  display: none !important;
+}
+.photo-select-card {
+  position: relative;
+  overflow: hidden;
+}
+.vote-photo-select {
+  width: 100%;
+  display: block;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  text-align: left;
+}
+.vote-photo-select .thumb-frame {
+  transition: transform .16s ease, box-shadow .16s ease;
+}
+.photo-select-card.selected {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px rgba(255,138,61,.22) inset;
+}
+.photo-select-card.selected .thumb-frame {
+  box-shadow: 0 0 0 2px rgba(255,138,61,.5) inset;
+}
+.photo-select-card .meta {
+  display: grid;
+  gap: 3px;
+  padding: 9px 10px 11px;
+}
+.photo-select-card .meta span {
+  color: var(--muted);
+  font-size: .76rem;
+  font-weight: 650;
+}
+.photo-select-card.selected .meta span {
+  color: var(--accent);
+}
+.vote-expand-btn {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  z-index: 4;
+  width: 34px !important;
+  height: 34px;
+  min-height: 34px;
+  padding: 0 !important;
+  display: grid !important;
+  place-items: center;
+  border-radius: 999px !important;
+  border: 1px solid rgba(255,255,255,.18) !important;
+  background: rgba(13,12,18,.88) !important;
+  color: var(--text) !important;
+  font-size: 1rem;
+  font-weight: 900;
+  line-height: 1;
+  box-shadow: 0 5px 15px rgba(0,0,0,.32);
+}
+.vote-selected-badge {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  z-index: 4;
+  width: 32px;
+  height: 32px;
+  display: grid;
+  place-items: center;
+  border-radius: 999px;
+  background: var(--accent);
+  color: #1d120a;
+  font-size: 1rem;
+  font-weight: 950;
+  box-shadow: 0 5px 15px rgba(0,0,0,.32);
+}
+@media (hover: hover) and (pointer: fine) {
+  .vote-photo-select:hover .thumb-frame { transform: translateY(-1px); }
+}
+@media (max-width: 760px) {
+  .vote-expand-btn { top: 6px; right: 6px; width: 32px !important; height: 32px; min-height: 32px; }
+  .vote-selected-badge { top: 6px; left: 6px; width: 30px; height: 30px; }
+  .photo-select-card .meta { padding: 8px 8px 9px; }
+  .photo-select-card .meta strong { font-size: .9rem; }
+  .photo-select-card .meta span { font-size: .7rem; }
+}

@@ -1,12 +1,11 @@
-DIRECT VOTING FIX
+CLEAN PHOTO-SELECT VOTING UPDATE
 
-Replace BOTH files in GitHub:
+Replace these files in GitHub:
 - app/page.js
 - app/globals.css
 
-When the new version is live, the voting screen will visibly say:
-"Voting screen ready • tap the orange VOTE button"
-
-Each contestant has a large orange "VOTE FOR [NAME]" button.
-Photos are NOT clickable while voting is open.
-A second Confirm Vote step records the vote.
+New voting behavior:
+- Tap the costume photo/card to select that contestant.
+- Tap the small ↗ button in the top-right to enlarge the photo.
+- No orange VOTE button under each contestant.
+- A single Submit Vote confirmation appears at the bottom after selection.

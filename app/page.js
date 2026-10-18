@@ -445,42 +445,49 @@ export default function HomePage() {
               <div className="voting-heading">
                 <div className="eyebrow">Voting is open</div>
                 <h2>🏆 Pick the best costume</h2>
-                <p className="muted">Tap the orange VOTE button under the costume you choose, then confirm. You can&apos;t vote for yourself.</p>
+                <p className="muted">Tap a costume photo to select it. Use the small ↗ button to enlarge a photo. You can&apos;t vote for yourself.</p>
               </div>
 
               {eligibleContestants.length === 0 ? (
                 <div className="notice">No other costumes are available yet.</div>
               ) : (
-                <>
-                  <div className="vote-version-note">Voting screen ready • tap the orange VOTE button</div>
-                  <div className="costume-grid voting-grid">
-                    {eligibleContestants.map((candidate) => {
-                      const selected = selectedCandidateId === candidate.id;
-                      return (
-                        <article className={`costume vote-card ${selected ? 'selected' : ''}`} key={candidate.id}>
-                          <div className="vote-photo-static" aria-hidden="true">
-                            <div className="thumb-frame">
-                              <img src={candidate.photoUrl} alt="" />
-                            </div>
+                <div className="costume-grid voting-grid">
+                  {eligibleContestants.map((candidate) => {
+                    const selected = selectedCandidateId === candidate.id;
+                    return (
+                      <article className={`costume vote-card photo-select-card ${selected ? 'selected' : ''}`} key={candidate.id}>
+                        <button
+                          type="button"
+                          className="vote-photo-select"
+                          onClick={() => setSelectedCandidateId(candidate.id)}
+                          disabled={voting}
+                          aria-pressed={selected}
+                          aria-label={`Select ${candidate.name} for your vote`}
+                        >
+                          <div className="thumb-frame">
+                            <img src={candidate.photoUrl} alt={`${candidate.name}'s costume`} />
                           </div>
                           <div className="meta">
                             <strong>{candidate.name}</strong>
-                            <span>{selected ? 'Ready to confirm ✓' : 'Choose this costume'}</span>
+                            <span>{selected ? 'Selected ✓' : 'Tap photo to vote'}</span>
                           </div>
-                          <button
-                            type="button"
-                            className={`vote-person-btn ${selected ? 'selected' : ''}`}
-                            onClick={() => setSelectedCandidateId(candidate.id)}
-                            disabled={voting}
-                            aria-pressed={selected}
-                          >
-                            {selected ? `✓ ${candidate.name} selected` : `VOTE FOR ${candidate.name}`}
-                          </button>
-                        </article>
-                      );
-                    })}
-                  </div>
-                </>
+                        </button>
+                        <button
+                          type="button"
+                          className="vote-expand-btn"
+                          onClick={(event) => {
+                            event.stopPropagation();
+                            openLightbox(votingLightboxItems, candidate.id);
+                          }}
+                          aria-label={`Enlarge ${candidate.name}'s costume photo`}
+                        >
+                          ↗
+                        </button>
+                        {selected ? <span className="vote-selected-badge" aria-hidden="true">✓</span> : null}
+                      </article>
+                    );
+                  })}
+                </div>
               )}
 
               {eligibleContestants.length > 0 ? (
@@ -488,14 +495,14 @@ export default function HomePage() {
                   {selectedCandidate ? (
                     <>
                       <div className="vote-confirm-title">Confirm your vote</div>
-                      <div className="vote-choice">You are voting for <strong>{selectedCandidate.name}</strong></div>
+                      <div className="vote-choice">You selected <strong>{selectedCandidate.name}</strong></div>
                       <button
                         className="btn vote-submit"
                         type="button"
                         onClick={() => handleVote(selectedCandidate)}
                         disabled={voting}
                       >
-                        {voting ? 'Submitting vote…' : `CONFIRM VOTE FOR ${selectedCandidate.name}`}
+                        {voting ? 'Submitting vote…' : `Submit Vote for ${selectedCandidate.name}`}
                       </button>
                       <button
                         className="vote-cancel-btn"
@@ -507,9 +514,9 @@ export default function HomePage() {
                       </button>
                     </>
                   ) : (
-                    <div className="vote-choice"><strong>Tap an orange VOTE button above.</strong></div>
+                    <div className="vote-choice"><strong>Tap a costume photo above to choose your vote.</strong></div>
                   )}
-                  <div className="vote-final-note">One vote only • cannot be changed</div>
+                  <div className="vote-final-note">One vote only • cannot be changed after submission</div>
                 </div>
               ) : null}
             </div>
