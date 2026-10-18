@@ -1,7 +1,6 @@
 import { isAdminRequest } from '../../../../lib/adminAuth';
 import { getSupabaseAdmin } from '../../../../lib/supabaseAdmin';
 import { json } from '../../../../lib/http';
-import { getResultsVisible } from '../../../../lib/resultsVisibility';
 
 export const runtime = 'nodejs';
 
@@ -11,7 +10,7 @@ export async function GET() {
   try {
     const supabase = getSupabaseAdmin();
     const [{ data: settings, error: settingsError }, { data: contestants, error: contestantsError }, { data: votes, error: votesError }] = await Promise.all([
-      supabase.from('party_settings').select('party_name, registration_open, voting_open').eq('id', 1).single(),
+      supabase.from('party_settings').select('party_name, registration_open, voting_open, results_visible').eq('id', 1).single(),
       supabase.from('contestants').select('id, name, created_at').order('created_at', { ascending: true }),
       supabase.from('votes').select('voter_id, candidate_id, created_at').order('created_at', { ascending: true })
     ]);
@@ -29,10 +28,8 @@ export async function GET() {
       if (vote.candidate_id in counts) counts[vote.candidate_id] += 1;
     }
 
-    const resultsVisible = await getResultsVisible(supabase);
-
     return json({
-      settings: { ...settings, results_visible: resultsVisible },
+      settings,
       totalVotes: voteRows.length,
       contestants: contestantRows.map((c) => ({ ...c, votes: counts[c.id] || 0 })),
       voteDetails: voteRows.map((vote) => ({

@@ -8,11 +8,15 @@ create table if not exists public.party_settings (
   party_name text not null default 'Costume Party',
   registration_open boolean not null default true,
   voting_open boolean not null default false,
+  results_visible boolean not null default false,
   updated_at timestamptz not null default now()
 );
 
-insert into public.party_settings (id, party_name, registration_open, voting_open)
-values (1, 'Costume Party', true, false)
+alter table public.party_settings
+  add column if not exists results_visible boolean not null default false;
+
+insert into public.party_settings (id, party_name, registration_open, voting_open, results_visible)
+values (1, 'Costume Party', true, false, false)
 on conflict (id) do nothing;
 
 create table if not exists public.contestants (

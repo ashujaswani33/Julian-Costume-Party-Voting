@@ -1,7 +1,6 @@
 import { isAdminRequest } from '../../../../lib/adminAuth';
 import { getSupabaseAdmin } from '../../../../lib/supabaseAdmin';
 import { json } from '../../../../lib/http';
-import { setResultsVisible } from '../../../../lib/resultsVisibility';
 
 export const runtime = 'nodejs';
 
@@ -13,7 +12,12 @@ export async function POST() {
     const { error } = await supabase.from('votes').delete().neq('voter_id', '00000000-0000-0000-0000-000000000000');
     if (error) throw error;
 
-    await setResultsVisible(supabase, false);
+    const { error: settingsError } = await supabase
+      .from('party_settings')
+      .update({ results_visible: false })
+      .eq('id', 1);
+    if (settingsError) throw settingsError;
+
     return json({ ok: true });
   } catch (error) {
     console.error(error);

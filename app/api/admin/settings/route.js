@@ -1,7 +1,6 @@
 import { isAdminRequest } from '../../../../lib/adminAuth';
 import { getSupabaseAdmin } from '../../../../lib/supabaseAdmin';
 import { json, safeName } from '../../../../lib/http';
-import { getResultsVisible, setResultsVisible } from '../../../../lib/resultsVisibility';
 
 export const runtime = 'nodejs';
 
@@ -13,15 +12,18 @@ export async function POST(request) {
     const patch = {};
 
     if (typeof body.registrationOpen === 'boolean') patch.registration_open = body.registrationOpen;
-    if (typeof body.votingOpen === 'boolean') patch.voting_open = body.votingOpen;
+    if (typeof body.votingOpen === 'boolean') {
+      patch.voting_open = body.votingOpen;
+      if (body.votingOpen) patch.results_visible = false;
+    }
+    if (typeof body.resultsVisible === 'boolean') patch.results_visible = body.resultsVisible;
     if (typeof body.partyName === 'string') {
       const partyName = safeName(body.partyName);
       if (!partyName) return json({ error: 'Party name cannot be blank.' }, 400);
       patch.party_name = partyName;
     }
 
-    const hasResultsChange = typeof body.resultsVisible === 'boolean';
-    if (!Object.keys(patch).length && !hasResultsChange) return json({ error: 'No settings to update.' }, 400);
+    if (!Object.keys(patch).length) return json({ error: 'No settings to update.' }, 400);
 
     const supabase = getSupabaseAdmin();
 
@@ -36,34 +38,21 @@ export async function POST(request) {
       if (votingWillBeOpen) return json({ error: 'Close voting before showing results to guests.' }, 400);
     }
 
-    let data = null;
-    if (Object.keys(patch).length) {
-      const result = await supabase
-        .from('party_settings')
-        .update(patch)
-        .eq('id', 1)
-        .select('party_name, registration_open, voting_open')
-        .single();
-      if (result.error) throw result.error;
-      data = result.data;
-    } else {
-      const result = await supabase
-        .from('party_settings')
-        .select('party_name, registration_open, voting_open')
-        .eq('id', 1)
-        .single();
-      if (result.error) throw result.error;
-      data = result.data;
+    const { data, error } = await supabase
+      .from('party_settings')
+      .update(patch)
+      .eq('id', 1)
+      .select('party_name, registration_open, voting_open, results_visible')
+      .single();
+
+    if (error) {
+      if (error.code === '42703' || String(error.message || '').includes('results_visible')) {
+        return json({ error: 'One-time setup needed: add a results_visible boolean column to party_settings in Supabase.' }, 500);
+      }
+      throw error;
     }
 
-    if (body.votingOpen === true) {
-      await setResultsVisible(supabase, false);
-    } else if (hasResultsChange) {
-      await setResultsVisible(supabase, body.resultsVisible);
-    }
-
-    const resultsVisible = await getResultsVisible(supabase);
-    return json({ settings: { ...data, results_visible: resultsVisible } });
+    return json({ settings: data });
   } catch (error) {
     console.error(error);
     return json({ error: 'Could not update party settings.' }, 500);
