@@ -174,3 +174,8 @@ This is appropriate for a private social event. It is not intended as a high-sec
 
 ## Admin vote audit update
 The admin results page now includes a private **Who voted for whom** table. This information is returned only by the password-protected admin API and is never sent to the guest page.
+
+
+## Android camera update
+
+The guest registration screen now has separate **Take Photo** and **Choose From Gallery** buttons. The camera button uses the device camera directly (rear-facing camera when supported), while the gallery button opens existing photos. This is more reliable across Android and iPhone than relying on one file picker.
