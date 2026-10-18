@@ -171,3 +171,6 @@ For now, the easiest way to change it is in Supabase:
 - Guest-facing API responses never include vote counts.
 
 This is appropriate for a private social event. It is not intended as a high-security public election system.
+
+## Admin vote audit update
+The admin results page now includes a private **Who voted for whom** table. This information is returned only by the password-protected admin API and is never sent to the guest page.
