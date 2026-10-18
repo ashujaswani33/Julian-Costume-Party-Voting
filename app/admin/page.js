@@ -11,9 +11,19 @@ export default function AdminPage() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [message, setMessage] = useState('');
+  const [demoCount, setDemoCount] = useState(12);
 
   useEffect(() => {
-    setSiteUrl(window.location.origin);
+    async function loadSiteUrl() {
+      try {
+        const res = await fetch('/api/site-url', { cache: 'no-store' });
+        const result = await res.json();
+        setSiteUrl(result.url || window.location.origin);
+      } catch {
+        setSiteUrl(window.location.origin);
+      }
+    }
+    loadSiteUrl();
     loadResults(false);
   }, []);
 
@@ -98,6 +108,49 @@ export default function AdminPage() {
       await loadResults();
     } catch (err) {
       setError(err.message || 'Could not clear votes.');
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function createDemoData() {
+    const count = Math.max(5, Math.min(50, Number.parseInt(String(demoCount), 10) || 12));
+    if (!window.confirm(`Create ${count} DEMO contestants and random votes? Existing DEMO entries will be replaced. Real guests will not be changed.`)) return;
+
+    setBusy(true);
+    setError('');
+    setMessage('');
+    try {
+      const res = await fetch('/api/admin/demo-data', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ count })
+      });
+      const result = await res.json();
+      if (!res.ok) throw new Error(result.error || 'Could not create demo data.');
+      setMessage(result.message || `Created ${count} demo entries.`);
+      await loadResults();
+    } catch (err) {
+      setError(err.message || 'Could not create demo data.');
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function removeDemoData() {
+    if (!window.confirm('Remove all DEMO contestants, their demo photos, and their votes? Real guests will stay.')) return;
+
+    setBusy(true);
+    setError('');
+    setMessage('');
+    try {
+      const res = await fetch('/api/admin/demo-data', { method: 'DELETE' });
+      const result = await res.json();
+      if (!res.ok) throw new Error(result.error || 'Could not remove demo data.');
+      setMessage(result.message || 'Demo data removed.');
+      await loadResults();
+    } catch (err) {
+      setError(err.message || 'Could not remove demo data.');
     } finally {
       setBusy(false);
     }
@@ -213,6 +266,35 @@ export default function AdminPage() {
           <div className="muted">Votes received</div>
           <div className="big-number">{data?.totalVotes || 0}</div>
         </div>
+      </section>
+
+      <section className="card stack" style={{ marginTop: 16 }}>
+        <div>
+          <div className="eyebrow">Testing tools</div>
+          <h2>Demo party data</h2>
+          <p className="muted" style={{ marginBottom: 0 }}>Generate realistic fake contestants, Halloween demo pictures, and random votes so you can preview the admin and guest result screens. Demo entries are clearly labeled <strong>DEMO</strong> and can be removed without deleting real guests.</p>
+        </div>
+
+        <div className="row" style={{ alignItems: 'end' }}>
+          <label style={{ width: 170 }}>
+            Demo entries (5–50)
+            <input
+              type="number"
+              min="5"
+              max="50"
+              value={demoCount}
+              onChange={(event) => setDemoCount(event.target.value)}
+              disabled={busy}
+            />
+          </label>
+          <button className="btn success" type="button" disabled={busy} onClick={createDemoData}>
+            {busy ? 'Working…' : 'Create Demo Data'}
+          </button>
+          <button className="btn secondary" type="button" disabled={busy} onClick={removeDemoData}>
+            Remove Demo Data
+          </button>
+        </div>
+        <div className="muted" style={{ fontSize: '.84rem' }}>Creating demo data replaces only previous DEMO entries. It does not change real registrations. Each demo contestant casts one random vote for another demo contestant.</div>
       </section>
 
       <section className="card stack" style={{ marginTop: 16 }}>
