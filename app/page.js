@@ -71,6 +71,7 @@ export default function HomePage() {
   const [loading, setLoading] = useState(true);
   const [registering, setRegistering] = useState(false);
   const [voting, setVoting] = useState(false);
+  const [selectedCandidateId, setSelectedCandidateId] = useState('');
   const [name, setName] = useState('');
   const [photo, setPhoto] = useState(null);
   const [preview, setPreview] = useState('');
@@ -135,6 +136,11 @@ export default function HomePage() {
   const eligibleContestants = useMemo(
     () => contestants.filter((contestant) => contestant.id !== me?.id),
     [contestants, me]
+  );
+
+  const selectedCandidate = useMemo(
+    () => eligibleContestants.find((contestant) => contestant.id === selectedCandidateId) || null,
+    [eligibleContestants, selectedCandidateId]
   );
 
   const publicRanking = useMemo(() => {
@@ -207,9 +213,6 @@ export default function HomePage() {
 
   async function handleVote(candidate) {
     if (!me || hasVoted || voting) return;
-    const confirmed = window.confirm(`Vote for ${candidate.name}? You can only vote once.`);
-    if (!confirmed) return;
-
     setVoting(true);
     setError('');
     setMessage('');
@@ -223,6 +226,7 @@ export default function HomePage() {
       const data = await readApiResponse(res);
       if (!res.ok) throw new Error(data.error || 'Vote failed.');
       setHasVoted(true);
+      setSelectedCandidateId('');
       setMessage('Your vote has been recorded. The host will reveal the standings when the competition is over.');
     } catch (err) {
       setError(err.message || 'Vote could not be recorded.');
@@ -232,31 +236,38 @@ export default function HomePage() {
     }
   }
 
+  const showLineup = !publicResults?.visible && !(me && settings.voting_open);
+
   return (
     <main className="shell">
-      <section className="hero">
-        <div className="eyebrow">🎃 Julian's Halloween Party • Costume Competition</div>
+      <section className={`hero ${me ? 'hero-returning' : ''}`}>
+        <div className="eyebrow">🎃 Julian&apos;s Halloween Party</div>
         <h1>Julian Halloween Party Costume Competition</h1>
-        <p className="spooky-challenge">Only the scared ones won’t register. 👻</p>
-        <p className="muted hero-copy">Show us what you’ve got. Register your costume now for a chance to claim a <strong>HEFTY reward</strong> at the end of the party.</p>
-        <div className="prize-banner" role="note">🏆 Dress to impress. Bragging rights are temporary. The reward is real.</div>
-        <div className="row">
-          <span className={`badge ${settings.registration_open ? 'open' : ''}`}>Registration {settings.registration_open ? 'open' : 'closed'}</span>
-          <span className={`badge ${settings.voting_open ? 'open' : ''}`}>Voting {settings.voting_open ? 'open' : 'closed'}</span>
-          <span className={`badge ${settings.results_visible ? 'open' : ''}`}>Results {settings.results_visible ? 'revealed' : 'hidden'}</span>
+        {!me ? (
+          <>
+            <p className="spooky-challenge">Only the scared ones won’t register. 👻</p>
+            <div className="hero-quickline">🏆 Register for a chance at a <strong>HEFTY reward</strong> at the end of the party.</div>
+          </>
+        ) : (
+          <div className="hero-quickline">🎭 You&apos;re entered. Keep this phone handy for voting.</div>
+        )}
+        <div className="status-strip" aria-label="Party status">
+          <span className={settings.registration_open ? 'status-on' : ''}>Registration <strong>{settings.registration_open ? 'OPEN' : 'CLOSED'}</strong></span>
+          <span className={settings.voting_open ? 'status-on' : ''}>Voting <strong>{settings.voting_open ? 'OPEN' : 'CLOSED'}</strong></span>
+          <span className={settings.results_visible ? 'status-on' : ''}>Results <strong>{settings.results_visible ? 'LIVE' : 'HIDDEN'}</strong></span>
         </div>
       </section>
 
-      {loading ? <div className="card">Loading party…</div> : null}
+      {loading ? <div className="card compact">Loading party…</div> : null}
       {error ? <div className="notice error-text" role="alert">{error}</div> : null}
       {message ? <div className="notice success-text" role="status">{message}</div> : null}
 
       {!loading && !me && (
-        <section className="grid two" style={{ marginTop: 16 }}>
-          <form className="card stack" onSubmit={handleRegister}>
-            <div>
-              <h2>🎭 Dare to enter?</h2>
-              <p className="muted">Add your name and costume photo. Use the same phone later when the showdown moves to voting.</p>
+        <section className="registration-wrap" style={{ marginTop: 12 }}>
+          <form className="card stack registration-card" onSubmit={handleRegister}>
+            <div className="registration-heading">
+              <h2>🎭 Enter the competition</h2>
+              <p className="muted">Name + costume photo. That&apos;s it.</p>
             </div>
 
             {!settings.registration_open ? (
@@ -265,14 +276,14 @@ export default function HomePage() {
               <>
                 <label>
                   Your name
-                  <input value={name} onChange={(e) => setName(e.target.value)} maxLength={50} placeholder="Example: Alex" autoComplete="name" required />
+                  <input value={name} onChange={(e) => setName(e.target.value)} maxLength={50} placeholder="Your name" autoComplete="name" required />
                 </label>
 
-                <div className="stack">
-                  <div style={{ fontWeight: 700 }}>Costume photo</div>
-                  <div className="row">
-                    <label className="btn" style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
-                      📷 Take Photo
+                <div className="stack photo-section">
+                  <div className="field-title">Costume photo</div>
+                  <div className="photo-actions">
+                    <label className="btn photo-btn">
+                      <span aria-hidden="true">📷</span> Take photo
                       <input
                         className="hidden"
                         type="file"
@@ -281,8 +292,8 @@ export default function HomePage() {
                         onChange={handlePhotoSelection}
                       />
                     </label>
-                    <label className="btn secondary" style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
-                      🖼️ Choose From Gallery
+                    <label className="btn secondary photo-btn">
+                      <span aria-hidden="true">🖼️</span> Gallery
                       <input
                         className="hidden"
                         type="file"
@@ -291,80 +302,118 @@ export default function HomePage() {
                       />
                     </label>
                   </div>
+                  <div className="upload-note">JPG, PNG or WebP • large photos resize automatically</div>
                 </div>
 
-                <div className="muted" style={{ fontSize: '.88rem' }}>Use the camera or choose an existing JPG, PNG, or WebP photo. Large photos are automatically resized for upload.</div>
-                {preview ? <img className="preview" src={preview} alt="Your costume preview" /> : null}
+                {preview ? (
+                  <div className="preview-row">
+                    <img className="preview preview-small" src={preview} alt="Your costume preview" />
+                    <div><strong>Photo ready ✓</strong><div className="muted">Looking scary enough.</div></div>
+                  </div>
+                ) : null}
 
-                <button className="btn" type="submit" disabled={registering}>
-                  {registering ? 'Entering the competition…' : '🎃 Enter the Costume Competition'}
+                <button className="btn primary-action" type="submit" disabled={registering}>
+                  {registering ? 'Entering…' : '🎃 Register My Costume'}
                 </button>
-                <div className="muted" style={{ fontSize: '.82rem' }}>
-                  By registering, you agree that your name and costume photo can be shown to people using this party page.
+
+                <div className="keep-phone">📱 <strong>Keep this same phone.</strong> You&apos;ll use it to vote later.</div>
+                <div className="mini-steps" aria-label="How it works">
+                  <span><strong>1</strong> Register</span>
+                  <span><strong>2</strong> Come back</span>
+                  <span><strong>3</strong> Vote</span>
                 </div>
+                <div className="micro-copy">By registering, your name and costume photo can be shown on this party page.</div>
               </>
             )}
           </form>
-
-          <section className="card stack">
-            <div>
-              <h2>How the fright night works</h2>
-              <p className="muted"><strong>1.</strong> Register your costume. <strong>2.</strong> Keep this page on the same phone. <strong>3.</strong> When voting opens, pick the costume that deserves the crown.</p>
-            </div>
-            <div className="notice">🕸️ The leaderboard stays secret while voting is underway. The host decides when to reveal the final standings.</div>
-          </section>
         </section>
       )}
 
       {!loading && me && (
-        <section className="card stack" style={{ marginTop: 16 }}>
-          <div className="row space-between">
+        <section className="card stack voter-card" style={{ marginTop: 12 }}>
+          <div className="row space-between entry-summary">
             <div>
-              <div className="eyebrow">You survived registration 👻</div>
+              <div className="eyebrow">You&apos;re entered ✓</div>
               <h2>{me.name}</h2>
             </div>
-            <span className="badge open">Costume entered ✓</span>
+            <span className="badge open">Costume entered</span>
           </div>
 
           {!settings.voting_open && !hasVoted ? (
-            <div className="notice">🦇 Your costume is in. Voting is not open yet—come back on this same phone when the host starts the showdown.</div>
+            <div className="notice compact-notice">🦇 Voting isn&apos;t open yet. Come back on this same phone when the host starts it.</div>
           ) : null}
 
           {hasVoted ? (
-            <div className="notice success-text"><strong>Vote submitted.</strong> Results remain private until the host reveals the standings.</div>
+            <div className="notice success-text compact-notice"><strong>Vote submitted ✓</strong> Results stay hidden until the host reveals them.</div>
           ) : null}
 
           {settings.voting_open && !hasVoted ? (
-            <div>
-              <h2 style={{ marginBottom: 6 }}>🏆 Crown the best costume</h2>
-              <p className="muted">Tap one photo. You cannot vote for yourself, and your vote cannot be changed.</p>
+            <div className="voting-panel">
+              <div className="voting-heading">
+                <div className="eyebrow">Voting is open</div>
+                <h2>🏆 Pick the best costume</h2>
+                <p className="muted">Tap one costume to select it, then submit your vote below. You can&apos;t vote for yourself.</p>
+              </div>
+
               {eligibleContestants.length === 0 ? (
                 <div className="notice">No other costumes are available yet.</div>
               ) : (
-                <div className="costume-grid">
-                  {eligibleContestants.map((candidate) => (
-                    <article className="costume selectable" key={candidate.id}>
-                      <button type="button" onClick={() => handleVote(candidate)} disabled={voting}>
-                        <img src={candidate.photoUrl} alt={`${candidate.name}'s costume`} />
-                        <div className="meta">Vote for {candidate.name}</div>
-                      </button>
-                    </article>
-                  ))}
+                <div className="costume-grid voting-grid">
+                  {eligibleContestants.map((candidate) => {
+                    const selected = selectedCandidateId === candidate.id;
+                    return (
+                      <article className={`costume vote-card ${selected ? 'selected' : ''}`} key={candidate.id}>
+                        <button
+                          type="button"
+                          onClick={() => setSelectedCandidateId(candidate.id)}
+                          disabled={voting}
+                          aria-pressed={selected}
+                          aria-label={`Select ${candidate.name}'s costume`}
+                        >
+                          <div className="vote-photo-wrap">
+                            <img src={candidate.photoUrl} alt={`${candidate.name}'s costume`} />
+                            {selected ? <span className="selected-mark" aria-hidden="true">✓</span> : null}
+                          </div>
+                          <div className="meta">
+                            <strong>{candidate.name}</strong>
+                            <span>{selected ? 'Selected ✓' : 'Tap to choose'}</span>
+                          </div>
+                        </button>
+                      </article>
+                    );
+                  })}
                 </div>
               )}
+
+              {eligibleContestants.length > 0 ? (
+                <div className={`vote-action ${selectedCandidate ? 'ready' : ''}`}>
+                  <div className="vote-choice">
+                    {selectedCandidate ? <>Your pick: <strong>{selectedCandidate.name}</strong></> : 'Choose one costume above'}
+                  </div>
+                  <button
+                    className="btn vote-submit"
+                    type="button"
+                    onClick={() => selectedCandidate && handleVote(selectedCandidate)}
+                    disabled={!selectedCandidate || voting}
+                  >
+                    {voting ? 'Submitting vote…' : selectedCandidate ? `Submit Vote for ${selectedCandidate.name}` : 'Select a costume first'}
+                  </button>
+                  <div className="vote-final-note">One vote only • cannot be changed</div>
+                </div>
+              ) : null}
             </div>
           ) : null}
         </section>
       )}
 
       {publicResults?.visible ? (
-        <section className="results-reveal card stack" style={{ marginTop: 24 }}>
+        <section className="results-reveal card stack" style={{ marginTop: 18 }}>
           <div className="row space-between">
             <div>
               <div className="eyebrow">🏆 Final standings</div>
               <h2>The votes are in</h2>
             </div>
-            <span className="badge open">{publicResults.totalVotes || 0} vote{publicResults.totalVotes === 1 ? '' : 's'} cast</span>
+            <span className="badge open">{publicResults.totalVotes || 0} vote{publicResults.totalVotes === 1 ? '' : 's'}</span>
           </div>
 
           {!publicRanking.length ? (
@@ -383,21 +432,23 @@ export default function HomePage() {
         </section>
       ) : null}
 
-      <section style={{ marginTop: 24 }}>
-        <div className="row space-between">
-          <h2>🎃 The Costume Lineup</h2>
-          <span className="muted">{contestants.length} registered</span>
-        </div>
-        <div className="costume-grid" style={{ marginTop: 12 }}>
-          {contestants.map((contestant) => (
-            <article className="costume" key={contestant.id}>
-              <img src={contestant.photoUrl} alt={`${contestant.name}'s costume`} />
-              <div className="meta">{contestant.name}</div>
-            </article>
-          ))}
-        </div>
-        {!contestants.length && !loading ? <div className="card muted" style={{ marginTop: 12 }}>No costumes have been registered yet.</div> : null}
-      </section>
+      {showLineup ? (
+        <section className="lineup-section" style={{ marginTop: 20 }}>
+          <div className="row space-between lineup-heading">
+            <h2>🎃 Costume Lineup</h2>
+            <span className="muted">{contestants.length} registered</span>
+          </div>
+          <div className="costume-grid lineup-grid" style={{ marginTop: 10 }}>
+            {contestants.map((contestant) => (
+              <article className="costume" key={contestant.id}>
+                <img src={contestant.photoUrl} alt={`${contestant.name}'s costume`} />
+                <div className="meta">{contestant.name}</div>
+              </article>
+            ))}
+          </div>
+          {!contestants.length && !loading ? <div className="card muted" style={{ marginTop: 10 }}>No costumes registered yet.</div> : null}
+        </section>
+      ) : null}
 
       <a className="admin-link" href="/admin">Party host / admin</a>
     </main>
