@@ -4,7 +4,7 @@ import { json, safeName } from '../../../lib/http';
 
 export const runtime = 'nodejs';
 
-const MAX_BYTES = 8 * 1024 * 1024;
+const MAX_BYTES = 3.5 * 1024 * 1024;
 const ALLOWED_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp']);
 
 function extensionFor(type) {
@@ -32,7 +32,7 @@ export async function POST(request) {
     if (!name) return json({ error: 'Please enter your name.' }, 400);
     if (!photo || typeof photo.arrayBuffer !== 'function' || typeof photo.type !== 'string') return json({ error: 'Please choose a costume photo.' }, 400);
     if (!ALLOWED_TYPES.has(photo.type)) return json({ error: 'Please use a JPG, PNG, or WebP photo.' }, 400);
-    if (photo.size <= 0 || photo.size > MAX_BYTES) return json({ error: 'Photo must be smaller than 8 MB.' }, 400);
+    if (photo.size <= 0 || photo.size > MAX_BYTES) return json({ error: 'Photo is still too large. Please choose a smaller photo.' }, 400);
 
     const token = crypto.randomUUID();
     const id = crypto.randomUUID();

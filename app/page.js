@@ -3,6 +3,64 @@
 import { useEffect, useMemo, useState } from 'react';
 
 const TOKEN_KEY = 'costume_party_voter_token';
+const SAFE_UPLOAD_BYTES = 3 * 1024 * 1024;
+
+async function readApiResponse(res) {
+  const text = await res.text();
+  if (!text) return {};
+  try {
+    return JSON.parse(text);
+  } catch {
+    if (res.status === 413 || text.toLowerCase().includes('request entity') || text.toLowerCase().includes('payload too large')) {
+      return { error: 'That photo is too large to upload. Please choose a smaller photo and try again.' };
+    }
+    return { error: 'The server returned an unexpected response. Please try again.' };
+  }
+}
+
+async function compressCostumePhoto(file) {
+  const allowed = new Set(['image/jpeg', 'image/png', 'image/webp']);
+  if (!allowed.has(file.type)) {
+    throw new Error('Please choose a JPG, PNG, or WebP photo.');
+  }
+  if (file.size <= SAFE_UPLOAD_BYTES) return file;
+
+  const objectUrl = URL.createObjectURL(file);
+  try {
+    const image = await new Promise((resolve, reject) => {
+      const img = new Image();
+      img.onload = () => resolve(img);
+      img.onerror = () => reject(new Error('This photo could not be read. Please try a different JPG, PNG, or WebP photo.'));
+      img.src = objectUrl;
+    });
+
+    const maxDimension = 1600;
+    const scale = Math.min(1, maxDimension / Math.max(image.naturalWidth, image.naturalHeight));
+    const width = Math.max(1, Math.round(image.naturalWidth * scale));
+    const height = Math.max(1, Math.round(image.naturalHeight * scale));
+    const canvas = document.createElement('canvas');
+    canvas.width = width;
+    canvas.height = height;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) throw new Error('This browser could not prepare the photo. Please try a smaller image.');
+    ctx.drawImage(image, 0, 0, width, height);
+
+    async function makeBlob(quality) {
+      return new Promise((resolve, reject) => {
+        canvas.toBlob((blob) => blob ? resolve(blob) : reject(new Error('Could not prepare the photo. Please try another image.')), 'image/jpeg', quality);
+      });
+    }
+
+    let blob = await makeBlob(0.82);
+    if (blob.size > SAFE_UPLOAD_BYTES) blob = await makeBlob(0.68);
+    if (blob.size > SAFE_UPLOAD_BYTES) {
+      throw new Error('The photo is still too large after resizing. Please choose a smaller photo.');
+    }
+    return new File([blob], 'costume.jpg', { type: 'image/jpeg', lastModified: Date.now() });
+  } finally {
+    URL.revokeObjectURL(objectUrl);
+  }
+}
 
 export default function HomePage() {
   const [settings, setSettings] = useState({ party_name: 'Costume Party', registration_open: true, voting_open: false });
@@ -24,8 +82,8 @@ export default function HomePage() {
         fetch('/api/settings', { cache: 'no-store' }),
         fetch('/api/contestants', { cache: 'no-store' })
       ]);
-      const settingsData = await settingsRes.json();
-      const contestantsData = await contestantsRes.json();
+      const settingsData = await readApiResponse(settingsRes);
+      const contestantsData = await readApiResponse(contestantsRes);
       if (settingsRes.ok) setSettings(settingsData);
       if (contestantsRes.ok) setContestants(contestantsData.contestants || []);
     } catch {
@@ -42,7 +100,7 @@ export default function HomePage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ voterToken })
       });
-      const data = await res.json();
+      const data = await readApiResponse(res);
       if (res.ok && data.registered) {
         setMe(data.contestant);
         setHasVoted(Boolean(data.hasVoted));
@@ -92,7 +150,7 @@ export default function HomePage() {
       form.append('photo', photo);
 
       const res = await fetch('/api/register', { method: 'POST', body: form });
-      const data = await res.json();
+      const data = await readApiResponse(res);
       if (!res.ok) throw new Error(data.error || 'Registration failed.');
 
       window.localStorage.setItem(TOKEN_KEY, data.voterToken);
@@ -124,7 +182,7 @@ export default function HomePage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ voterToken, candidateId: candidate.id })
       });
-      const data = await res.json();
+      const data = await readApiResponse(res);
       if (!res.ok) throw new Error(data.error || 'Vote failed.');
       setHasVoted(true);
       setMessage('Your vote has been recorded. Vote totals are visible only to the admin.');
@@ -174,12 +232,32 @@ export default function HomePage() {
                   <input
                     type="file"
                     accept="image/jpeg,image/png,image/webp"
-                    onChange={(e) => setPhoto(e.target.files?.[0] || null)}
+                    onChange={async (e) => {
+                      const selected = e.target.files?.[0] || null;
+                      setError('');
+                      if (!selected) {
+                        setPhoto(null);
+                        return;
+                      }
+                      try {
+                        const optimized = await compressCostumePhoto(selected);
+                        setPhoto(optimized);
+                        if (optimized.size < selected.size) {
+                          setMessage('Large photo optimized automatically. Ready to register.');
+                        } else {
+                          setMessage('');
+                        }
+                      } catch (err) {
+                        setPhoto(null);
+                        e.target.value = '';
+                        setError(err.message || 'Please choose a different photo.');
+                      }
+                    }}
                     required
                   />
                 </label>
 
-                <div className="muted" style={{ fontSize: '.88rem' }}>JPG, PNG, or WebP. Maximum 8 MB.</div>
+                <div className="muted" style={{ fontSize: '.88rem' }}>JPG, PNG, or WebP. Large photos are automatically resized for upload.</div>
                 {preview ? <img className="preview" src={preview} alt="Your costume preview" /> : null}
 
                 <button className="btn" type="submit" disabled={registering}>
