@@ -133,6 +133,28 @@ export default function HomePage() {
     [contestants, me]
   );
 
+  async function handlePhotoSelection(event) {
+    const selected = event.target.files?.[0] || null;
+    setError('');
+    setMessage('');
+
+    if (!selected) {
+      return;
+    }
+
+    try {
+      const optimized = await compressCostumePhoto(selected);
+      setPhoto(optimized);
+      if (optimized.size < selected.size) {
+        setMessage('Large photo optimized automatically. Ready to register.');
+      }
+    } catch (err) {
+      setPhoto(null);
+      event.target.value = '';
+      setError(err.message || 'Please choose a different photo.');
+    }
+  }
+
   async function handleRegister(event) {
     event.preventDefault();
     setError('');
@@ -227,37 +249,32 @@ export default function HomePage() {
                   <input value={name} onChange={(e) => setName(e.target.value)} maxLength={50} placeholder="Example: Alex" autoComplete="name" required />
                 </label>
 
-                <label>
-                  Costume photo
-                  <input
-                    type="file"
-                    accept="image/jpeg,image/png,image/webp"
-                    onChange={async (e) => {
-                      const selected = e.target.files?.[0] || null;
-                      setError('');
-                      if (!selected) {
-                        setPhoto(null);
-                        return;
-                      }
-                      try {
-                        const optimized = await compressCostumePhoto(selected);
-                        setPhoto(optimized);
-                        if (optimized.size < selected.size) {
-                          setMessage('Large photo optimized automatically. Ready to register.');
-                        } else {
-                          setMessage('');
-                        }
-                      } catch (err) {
-                        setPhoto(null);
-                        e.target.value = '';
-                        setError(err.message || 'Please choose a different photo.');
-                      }
-                    }}
-                    required
-                  />
-                </label>
+                <div className="stack">
+                  <div style={{ fontWeight: 700 }}>Costume photo</div>
+                  <div className="row">
+                    <label className="btn" style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
+                      📷 Take Photo
+                      <input
+                        className="hidden"
+                        type="file"
+                        accept="image/*"
+                        capture="environment"
+                        onChange={handlePhotoSelection}
+                      />
+                    </label>
+                    <label className="btn secondary" style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
+                      🖼️ Choose From Gallery
+                      <input
+                        className="hidden"
+                        type="file"
+                        accept="image/jpeg,image/png,image/webp"
+                        onChange={handlePhotoSelection}
+                      />
+                    </label>
+                  </div>
+                </div>
 
-                <div className="muted" style={{ fontSize: '.88rem' }}>JPG, PNG, or WebP. Large photos are automatically resized for upload.</div>
+                <div className="muted" style={{ fontSize: '.88rem' }}>Use the camera or choose an existing JPG, PNG, or WebP photo. Large photos are automatically resized for upload.</div>
                 {preview ? <img className="preview" src={preview} alt="Your costume preview" /> : null}
 
                 <button className="btn" type="submit" disabled={registering}>

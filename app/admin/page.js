@@ -229,6 +229,33 @@ export default function AdminPage() {
         </table>
       </section>
 
+      <section className="card stack" style={{ marginTop: 16 }}>
+        <div>
+          <div className="eyebrow">Admin only</div>
+          <h2>Who voted for whom</h2>
+          <p className="muted">This detailed vote trail is visible only after admin sign-in. Guests never receive it.</p>
+        </div>
+
+        {!data?.voteDetails?.length ? (
+          <div className="muted">No votes have been cast yet.</div>
+        ) : (
+          <div className="table-wrap">
+            <table>
+              <thead><tr><th>Voter</th><th>Voted for</th><th>Time</th></tr></thead>
+              <tbody>
+                {data.voteDetails.map((vote, index) => (
+                  <tr key={`${vote.voterId}-${index}`}>
+                    <td><strong>{vote.voterName}</strong></td>
+                    <td>{vote.candidateName}</td>
+                    <td>{vote.createdAt ? new Date(vote.createdAt).toLocaleString() : '—'}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </section>
+
       <a className="admin-link" href="/">Open guest page</a>
     </main>
   );
