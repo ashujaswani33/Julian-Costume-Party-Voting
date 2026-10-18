@@ -63,8 +63,9 @@ async function compressCostumePhoto(file) {
 }
 
 export default function HomePage() {
-  const [settings, setSettings] = useState({ party_name: 'Costume Party', registration_open: true, voting_open: false });
+  const [settings, setSettings] = useState({ party_name: 'Costume Party', registration_open: true, voting_open: false, results_visible: false });
   const [contestants, setContestants] = useState([]);
+  const [publicResults, setPublicResults] = useState({ visible: false, totalVotes: 0, ranking: [] });
   const [me, setMe] = useState(null);
   const [hasVoted, setHasVoted] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -78,14 +79,17 @@ export default function HomePage() {
 
   async function loadPublic() {
     try {
-      const [settingsRes, contestantsRes] = await Promise.all([
+      const [settingsRes, contestantsRes, resultsRes] = await Promise.all([
         fetch('/api/settings', { cache: 'no-store' }),
-        fetch('/api/contestants', { cache: 'no-store' })
+        fetch('/api/contestants', { cache: 'no-store' }),
+        fetch('/api/results', { cache: 'no-store' })
       ]);
       const settingsData = await readApiResponse(settingsRes);
       const contestantsData = await readApiResponse(contestantsRes);
+      const resultsData = await readApiResponse(resultsRes);
       if (settingsRes.ok) setSettings(settingsData);
       if (contestantsRes.ok) setContestants(contestantsData.contestants || []);
+      if (resultsRes.ok) setPublicResults(resultsData);
     } catch {
       setError('Could not load the party right now. Please refresh.');
     }
@@ -132,6 +136,18 @@ export default function HomePage() {
     () => contestants.filter((contestant) => contestant.id !== me?.id),
     [contestants, me]
   );
+
+  const publicRanking = useMemo(() => {
+    const byId = Object.fromEntries(contestants.map((contestant) => [contestant.id, contestant]));
+    let previousVotes = null;
+    let currentRank = 0;
+    return (publicResults?.ranking || []).map((row, index) => {
+      if (previousVotes === null || row.votes !== previousVotes) currentRank = index + 1;
+      previousVotes = row.votes;
+      return { ...row, rank: currentRank, photoUrl: byId[row.id]?.photoUrl || '' };
+    });
+  }, [contestants, publicResults]);
+
 
   async function handlePhotoSelection(event) {
     const selected = event.target.files?.[0] || null;
@@ -207,7 +223,7 @@ export default function HomePage() {
       const data = await readApiResponse(res);
       if (!res.ok) throw new Error(data.error || 'Vote failed.');
       setHasVoted(true);
-      setMessage('Your vote has been recorded. Vote totals are visible only to the admin.');
+      setMessage('Your vote has been recorded. The host will reveal the standings when the competition is over.');
     } catch (err) {
       setError(err.message || 'Vote could not be recorded.');
       await loadMe();
@@ -227,6 +243,7 @@ export default function HomePage() {
         <div className="row">
           <span className={`badge ${settings.registration_open ? 'open' : ''}`}>Registration {settings.registration_open ? 'open' : 'closed'}</span>
           <span className={`badge ${settings.voting_open ? 'open' : ''}`}>Voting {settings.voting_open ? 'open' : 'closed'}</span>
+          <span className={`badge ${settings.results_visible ? 'open' : ''}`}>Results {settings.results_visible ? 'revealed' : 'hidden'}</span>
         </div>
       </section>
 
@@ -294,7 +311,7 @@ export default function HomePage() {
               <h2>How the fright night works</h2>
               <p className="muted"><strong>1.</strong> Register your costume. <strong>2.</strong> Keep this page on the same phone. <strong>3.</strong> When voting opens, pick the costume that deserves the crown.</p>
             </div>
-            <div className="notice">🕸️ The leaderboard stays secret. Only the host can see the votes before the winner is revealed.</div>
+            <div className="notice">🕸️ The leaderboard stays secret while voting is underway. The host decides when to reveal the final standings.</div>
           </section>
         </section>
       )}
@@ -314,7 +331,7 @@ export default function HomePage() {
           ) : null}
 
           {hasVoted ? (
-            <div className="notice success-text"><strong>Vote submitted.</strong> Results remain private until the host announces the winner.</div>
+            <div className="notice success-text"><strong>Vote submitted.</strong> Results remain private until the host reveals the standings.</div>
           ) : null}
 
           {settings.voting_open && !hasVoted ? (
@@ -339,6 +356,32 @@ export default function HomePage() {
           ) : null}
         </section>
       )}
+
+      {publicResults?.visible ? (
+        <section className="results-reveal card stack" style={{ marginTop: 24 }}>
+          <div className="row space-between">
+            <div>
+              <div className="eyebrow">🏆 Final standings</div>
+              <h2>The votes are in</h2>
+            </div>
+            <span className="badge open">{publicResults.totalVotes || 0} vote{publicResults.totalVotes === 1 ? '' : 's'} cast</span>
+          </div>
+
+          {!publicRanking.length ? (
+            <div className="muted">No results to show yet.</div>
+          ) : (
+            <div className="ranking-list">
+              {publicRanking.map((row) => (
+                <article className={`ranking-row ${row.rank === 1 ? 'winner' : ''}`} key={row.id}>
+                  <div className="rank-number">{row.rank === 1 ? '🏆' : `#${row.rank}`}</div>
+                  {row.photoUrl ? <img src={row.photoUrl} alt={`${row.name}'s costume`} /> : null}
+                  <div className="ranking-name"><strong>{row.name}</strong><span>{row.votes} vote{row.votes === 1 ? '' : 's'}</span></div>
+                </article>
+              ))}
+            </div>
+          )}
+        </section>
+      ) : null}
 
       <section style={{ marginTop: 24 }}>
         <div className="row space-between">

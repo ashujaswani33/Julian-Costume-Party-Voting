@@ -160,6 +160,9 @@ export default function AdminPage() {
             <span className={`badge ${data?.settings?.voting_open ? 'open' : ''}`}>
               Voting {data?.settings?.voting_open ? 'open' : 'closed'}
             </span>
+            <span className={`badge ${data?.settings?.results_visible ? 'open' : ''}`}>
+              Guest results {data?.settings?.results_visible ? 'visible' : 'hidden'}
+            </span>
           </div>
           <div className="row">
             <button
@@ -174,13 +177,22 @@ export default function AdminPage() {
               className={data?.settings?.voting_open ? 'btn secondary' : 'btn success'}
               type="button"
               disabled={busy}
-              onClick={() => updateSettings({ votingOpen: !data.settings.voting_open }, data.settings.voting_open ? 'Voting closed.' : 'Voting opened.')}
+              onClick={() => updateSettings({ votingOpen: !data.settings.voting_open }, data.settings.voting_open ? 'Voting closed. Results are still hidden until you reveal them.' : 'Voting opened. Guest results were hidden automatically.')}
             >
               {data?.settings?.voting_open ? 'Close voting' : 'Open voting'}
             </button>
+            <button
+              className={data?.settings?.results_visible ? 'btn secondary' : 'btn success'}
+              type="button"
+              disabled={busy || data?.settings?.voting_open}
+              title={data?.settings?.voting_open ? 'Close voting before revealing results.' : ''}
+              onClick={() => updateSettings({ resultsVisible: !data.settings.results_visible }, data.settings.results_visible ? 'Results hidden from guests.' : 'Final standings are now visible to guests.')}
+            >
+              {data?.settings?.results_visible ? 'Hide Results from Guests' : 'Show Results to Guests'}
+            </button>
             <button className="btn danger" type="button" disabled={busy} onClick={clearVotes}>Clear votes</button>
           </div>
-          <div className="muted" style={{ fontSize: '.88rem' }}>Tip: close registration before opening voting so the contestant list stays fixed.</div>
+          <div className="muted" style={{ fontSize: '.88rem' }}>Tip: close registration before voting. When voting ends, click <strong>Show Results to Guests</strong> to reveal the ranking and vote counts. The who-voted-for-whom table stays private.</div>
         </div>
 
         <div className="card stack">

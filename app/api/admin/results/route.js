@@ -1,6 +1,7 @@
 import { isAdminRequest } from '../../../../lib/adminAuth';
 import { getSupabaseAdmin } from '../../../../lib/supabaseAdmin';
 import { json } from '../../../../lib/http';
+import { getResultsVisible } from '../../../../lib/resultsVisibility';
 
 export const runtime = 'nodejs';
 
@@ -28,8 +29,10 @@ export async function GET() {
       if (vote.candidate_id in counts) counts[vote.candidate_id] += 1;
     }
 
+    const resultsVisible = await getResultsVisible(supabase);
+
     return json({
-      settings,
+      settings: { ...settings, results_visible: resultsVisible },
       totalVotes: voteRows.length,
       contestants: contestantRows.map((c) => ({ ...c, votes: counts[c.id] || 0 })),
       voteDetails: voteRows.map((vote) => ({

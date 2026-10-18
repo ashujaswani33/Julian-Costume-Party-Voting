@@ -10,7 +10,8 @@ A deployable party app with:
 - Admin password protected results
 - Open/close registration
 - Open/close voting
-- Winner and vote totals visible only in admin
+- Winner and vote totals visible in admin at all times
+- Admin-controlled public standings reveal for guests after voting
 - QR code generated automatically on the admin page
 
 ## What you need
@@ -140,12 +141,17 @@ In `/admin`:
 5. They cannot vote for themselves.
 6. They can vote only once.
 
-Guests never receive the vote totals from the public API.
+Guests do not receive vote totals while the standings are hidden.
 
 ### When voting is finished
 
 1. Click **Close voting**.
-2. The private admin results page shows the winner and all vote totals.
+2. The private admin results page continues to show the winner and all vote totals.
+3. When you are ready for everyone to see the outcome, click **Show Results to Guests**.
+4. Guests will see the ranked list with each contestant's photo, name, rank, and vote count.
+5. You can click **Hide Results from Guests** again at any time.
+
+Opening voting again automatically hides the guest standings. The detailed **Who voted for whom** table always remains admin-only.
 
 ## Important practical note
 
@@ -168,7 +174,8 @@ For now, the easiest way to change it is in Supabase:
 - Costume photos are kept in a private Supabase Storage bucket and displayed with temporary signed links.
 - Admin results require an HttpOnly signed admin-session cookie.
 - The admin password is an environment variable and is not shipped to the guest browser.
-- Guest-facing API responses never include vote counts.
+- Guest-facing vote counts are returned only after the admin explicitly reveals the standings and only while voting is closed.
+- Individual voter choices are never returned by the public API.
 
 This is appropriate for a private social event. It is not intended as a high-security public election system.
 
@@ -183,3 +190,9 @@ The guest registration screen now has separate **Take Photo** and **Choose From 
 ## Halloween interface update
 The guest-facing page is branded as **Julian Halloween Party Costume Competition** and includes the playful registration challenge and hefty-reward message requested by the host.
 
+
+## Public standings update
+
+The admin page now has **Show Results to Guests** and **Hide Results from Guests** controls. This update does **not** require a Supabase SQL/database change. The app stores the reveal switch privately in the existing `costume-photos` storage bucket.
+
+Guest standings show rank, costume photo, name, and number of votes. The private vote-audit table remains admin-only.
