@@ -4,6 +4,10 @@ import { json } from '../../../../lib/http';
 
 export const runtime = 'nodejs';
 
+function isAdminRegisteredPhotoPath(path) {
+  return typeof path === 'string' && path.startsWith('admin-no-phone/');
+}
+
 export async function GET() {
   if (!(await isAdminRequest())) return json({ error: 'Unauthorized.' }, 401);
 
@@ -11,7 +15,7 @@ export async function GET() {
     const supabase = getSupabaseAdmin();
     const [{ data: settings, error: settingsError }, { data: contestants, error: contestantsError }, { data: votes, error: votesError }] = await Promise.all([
       supabase.from('party_settings').select('party_name, registration_open, voting_open, results_visible').eq('id', 1).single(),
-      supabase.from('contestants').select('id, name, created_at').order('created_at', { ascending: true }),
+      supabase.from('contestants').select('id, name, created_at, photo_path').order('created_at', { ascending: true }),
       supabase.from('votes').select('voter_id, candidate_id, created_at').order('created_at', { ascending: true })
     ]);
 
@@ -31,7 +35,13 @@ export async function GET() {
     return json({
       settings,
       totalVotes: voteRows.length,
-      contestants: contestantRows.map((c) => ({ ...c, votes: counts[c.id] || 0 })),
+      contestants: contestantRows.map((c) => ({
+        id: c.id,
+        name: c.name,
+        created_at: c.created_at,
+        votes: counts[c.id] || 0,
+        adminRegistered: isAdminRegisteredPhotoPath(c.photo_path)
+      })),
       voteDetails: voteRows.map((vote) => ({
         voterId: vote.voter_id,
         voterName: names[vote.voter_id] || 'Unknown guest',

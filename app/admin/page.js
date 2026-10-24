@@ -3,6 +3,52 @@
 import { useEffect, useMemo, useState } from 'react';
 import { QRCodeSVG } from 'qrcode.react';
 
+const SAFE_UPLOAD_BYTES = 3 * 1024 * 1024;
+
+async function compressCostumePhoto(file) {
+  const allowed = new Set(['image/jpeg', 'image/png', 'image/webp']);
+  if (!allowed.has(file.type)) {
+    throw new Error('Please choose a JPG, PNG, or WebP photo.');
+  }
+  if (file.size <= SAFE_UPLOAD_BYTES) return file;
+
+  const objectUrl = URL.createObjectURL(file);
+  try {
+    const image = await new Promise((resolve, reject) => {
+      const img = new Image();
+      img.onload = () => resolve(img);
+      img.onerror = () => reject(new Error('This photo could not be read. Please try a different JPG, PNG, or WebP photo.'));
+      img.src = objectUrl;
+    });
+
+    const maxDimension = 1600;
+    const scale = Math.min(1, maxDimension / Math.max(image.naturalWidth, image.naturalHeight));
+    const width = Math.max(1, Math.round(image.naturalWidth * scale));
+    const height = Math.max(1, Math.round(image.naturalHeight * scale));
+    const canvas = document.createElement('canvas');
+    canvas.width = width;
+    canvas.height = height;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) throw new Error('This browser could not prepare the photo. Please try a smaller image.');
+    ctx.drawImage(image, 0, 0, width, height);
+
+    async function makeBlob(quality) {
+      return new Promise((resolve, reject) => {
+        canvas.toBlob((blob) => blob ? resolve(blob) : reject(new Error('Could not prepare the photo. Please try another image.')), 'image/jpeg', quality);
+      });
+    }
+
+    let blob = await makeBlob(0.82);
+    if (blob.size > SAFE_UPLOAD_BYTES) blob = await makeBlob(0.68);
+    if (blob.size > SAFE_UPLOAD_BYTES) {
+      throw new Error('The photo is still too large after resizing. Please choose a smaller photo.');
+    }
+    return new File([blob], 'costume.jpg', { type: 'image/jpeg', lastModified: Date.now() });
+  } finally {
+    URL.revokeObjectURL(objectUrl);
+  }
+}
+
 export default function AdminPage() {
   const [password, setPassword] = useState('');
   const [authenticated, setAuthenticated] = useState(false);
@@ -12,6 +58,9 @@ export default function AdminPage() {
   const [error, setError] = useState('');
   const [message, setMessage] = useState('');
   const [demoCount, setDemoCount] = useState(12);
+  const [manualName, setManualName] = useState('');
+  const [manualPhoto, setManualPhoto] = useState(null);
+  const [manualPreview, setManualPreview] = useState('');
 
   useEffect(() => {
     async function loadSiteUrl() {
@@ -27,6 +76,16 @@ export default function AdminPage() {
     loadResults(false);
   }, []);
 
+  useEffect(() => {
+    if (!manualPhoto) {
+      setManualPreview('');
+      return;
+    }
+    const previewUrl = URL.createObjectURL(manualPhoto);
+    setManualPreview(previewUrl);
+    return () => URL.revokeObjectURL(previewUrl);
+  }, [manualPhoto]);
+
   const ranking = useMemo(() => {
     return [...(data?.contestants || [])].sort((a, b) => b.votes - a.votes || a.name.localeCompare(b.name));
   }, [data]);
@@ -35,6 +94,10 @@ export default function AdminPage() {
     if (!ranking.length || ranking[0].votes === 0) return [];
     return ranking.filter((row) => row.votes === ranking[0].votes);
   }, [ranking]);
+
+  const adminRegisteredCount = useMemo(() => {
+    return (data?.contestants || []).filter((row) => row.adminRegistered).length;
+  }, [data]);
 
   async function loadResults(showError = true) {
     try {
@@ -156,6 +219,57 @@ export default function AdminPage() {
     }
   }
 
+  async function handleManualPhotoSelection(event) {
+    const selected = event.target.files?.[0] || null;
+    setError('');
+    if (!selected) return;
+    try {
+      const optimized = await compressCostumePhoto(selected);
+      setManualPhoto(optimized);
+      if (optimized.size < selected.size) {
+        setMessage('Large photo optimized automatically. Ready to add this guest.');
+      }
+    } catch (err) {
+      setManualPhoto(null);
+      event.target.value = '';
+      setError(err.message || 'Please choose a different photo.');
+    }
+  }
+
+  async function registerManualGuest(event) {
+    event.preventDefault();
+    setError('');
+    setMessage('');
+
+    if (!manualName.trim() || !manualPhoto) {
+      setError('Please enter the guest name and choose a costume photo.');
+      return;
+    }
+
+    setBusy(true);
+    try {
+      const form = new FormData();
+      form.append('name', manualName.trim());
+      form.append('photo', manualPhoto);
+      const res = await fetch('/api/admin/register-child', {
+        method: 'POST',
+        body: form
+      });
+      const result = await res.json();
+      if (!res.ok) throw new Error(result.error || 'Could not add guest.');
+
+      setManualName('');
+      setManualPhoto(null);
+      setManualPreview('');
+      setMessage(result.message || `${result.contestant?.name || 'Guest'} added successfully.`);
+      await loadResults();
+    } catch (err) {
+      setError(err.message || 'Could not add guest.');
+    } finally {
+      setBusy(false);
+    }
+  }
+
   async function logout() {
     await fetch('/api/admin/logout', { method: 'POST' });
     setAuthenticated(false);
@@ -270,6 +384,53 @@ export default function AdminPage() {
 
       <section className="card stack" style={{ marginTop: 16 }}>
         <div>
+          <div className="eyebrow">Admin helper</div>
+          <h2>Register guest without phone</h2>
+          <p className="muted" style={{ marginBottom: 0 }}>Use this for kids or guests who do not have their own phone. They will appear in the competition and can receive votes, but they will not cast a vote unless you later register them on a phone.</p>
+        </div>
+
+        <form className="stack" onSubmit={registerManualGuest}>
+          <label>
+            Guest name
+            <input value={manualName} onChange={(event) => setManualName(event.target.value)} maxLength={50} placeholder="Child or guest name" disabled={busy} required />
+          </label>
+
+          <div className="stack photo-section">
+            <div className="field-title">Costume photo</div>
+            <div className="photo-actions">
+              <label className="btn photo-btn">
+                <span aria-hidden="true">📷</span> Take photo
+                <input className="hidden" type="file" accept="image/*" capture="environment" onChange={handleManualPhotoSelection} disabled={busy} />
+              </label>
+              <label className="btn secondary photo-btn">
+                <span aria-hidden="true">🖼️</span> Gallery
+                <input className="hidden" type="file" accept="image/jpeg,image/png,image/webp" onChange={handleManualPhotoSelection} disabled={busy} />
+              </label>
+            </div>
+            <div className="upload-note">JPG, PNG or WebP • large photos resize automatically</div>
+          </div>
+
+          {manualPreview ? (
+            <div className="preview-row">
+              <img className="preview-small" src={manualPreview} alt="Guest costume preview" />
+              <div>
+                <strong>Photo ready ✓</strong>
+                <div className="muted">This entry will be marked privately as Admin registered / No phone.</div>
+              </div>
+            </div>
+          ) : null}
+
+          <div className="row" style={{ alignItems: 'end' }}>
+            <button className="btn success" type="submit" disabled={busy}>
+              {busy ? 'Adding guest…' : 'Add Guest Without Phone'}
+            </button>
+            <div className="muted" style={{ fontSize: '.84rem' }}>{adminRegisteredCount} admin-added guest{adminRegisteredCount === 1 ? '' : 's'} currently in the competition.</div>
+          </div>
+        </form>
+      </section>
+
+      <section className="card stack" style={{ marginTop: 16 }}>
+        <div>
           <div className="eyebrow">Testing tools</div>
           <h2>Demo party data</h2>
           <p className="muted" style={{ marginBottom: 0 }}>Generate realistic fake contestants, Halloween demo pictures, and random votes so you can preview the admin and guest result screens. Demo entries are clearly labeled <strong>DEMO</strong> and can be removed without deleting real guests.</p>
@@ -317,7 +478,17 @@ export default function AdminPage() {
           <tbody>
             {ranking.map((row, index) => {
               const share = data.totalVotes ? Math.round((row.votes / data.totalVotes) * 100) : 0;
-              return <tr key={row.id}><td>{index + 1}</td><td><strong>{row.name}</strong></td><td>{row.votes}</td><td>{share}%</td></tr>;
+              return (
+                <tr key={row.id}>
+                  <td>{index + 1}</td>
+                  <td>
+                    <strong>{row.name}</strong>
+                    {row.adminRegistered ? <div className="muted" style={{ fontSize: '.78rem' }}>Admin registered / No phone</div> : null}
+                  </td>
+                  <td>{row.votes}</td>
+                  <td>{share}%</td>
+                </tr>
+              );
             })}
           </tbody>
         </table>
